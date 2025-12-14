@@ -1,0 +1,51 @@
+version: "3.8"
+
+services:
+  yourlslink:
+    image: yourls:latest
+    networks:
+      - akaii
+
+    # Publication Swarm (routing mesh) -> accessible via 192.168.88.220:8082
+    ports:
+      - target: 80
+        published: 8082
+        protocol: tcp
+        mode: ingress
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.keepalived_vip == true
+
+    environment:
+      YOURLS_SITE: "https://link.nc"
+      YOURLS_USER: "akaii"
+      YOURLS_PASS_FILE: "/run/secrets/akaii"
+
+      YOURLS_DB_HOST: "192.168.88.220:3306"
+      YOURLS_DB_USER: "ak"
+      YOURLS_DB_NAME: "yourlslink_db"
+      YOURLS_DB_PASS_FILE: "/run/secrets/akaii"
+
+    volumes:
+      - /mnt/gluster/yourlslink/security.conf:/etc/apache2/conf-enabled/security.conf:ro
+      - /mnt/gluster/yourlslink/config.php:/var/www/html/user/config.php
+      - /mnt/gluster/yourlslink/backups:/backups
+      - /mnt/gluster/yourlslink/plugins:/var/www/html/user/plugins
+
+    secrets:
+      - akaii
+
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+
+secrets:
+  akaii:
+    external: true
+
+networks:
+  akaii:
+    external: true
